@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatSDG } from "@/lib/currency";
 import {
@@ -45,32 +45,35 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().slice(0, 10);
-  const monthStart = `${today.slice(0, 8)}01`;
-  const [from, setFrom] = useState(monthStart);
+  const yearStart = `${today.slice(0, 4)}-01-01`;
+  const [from, setFrom] = useState(yearStart);
   const [to, setTo] = useState(today);
   const [type, setType] = useState<FilterType>("all");
   const [brand, setBrand] = useState<Brand | "all">("all");
   const [categoryId, setCategoryId] = useState<string>("all");
 
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      setLoading(true);
-      const [{ data: tx }, { data: c }, { data: cl }] = await Promise.all([
-        supabase
-          .from("transactions")
-          .select("*")
-          .order("date", { ascending: false })
-          .limit(500),
-        supabase.from("categories").select("*"),
-        supabase.from("clients").select("*"),
-      ]);
-      setTxns((tx ?? []) as Transaction[]);
-      setCats((c ?? []) as Category[]);
-      setClients((cl ?? []) as Client[]);
-      setLoading(false);
-    })();
+  const load = useCallback(async () => {
+    const supabase = createClient();
+    setLoading(true);
+    const [{ data: tx }, { data: c }, { data: cl }] = await Promise.all([
+      supabase
+        .from("transactions")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase.from("categories").select("*"),
+      supabase.from("clients").select("*"),
+    ]);
+    setTxns((tx ?? []) as Transaction[]);
+    setCats((c ?? []) as Category[]);
+    setClients((cl ?? []) as Client[]);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const catMap = useMemo(
     () => new Map(cats.map((c) => [c.id, c])),
@@ -103,11 +106,16 @@ export default function TransactionsPage() {
             Track income and expenses in any currency — stored in SDG.
           </p>
         </div>
+        <div className="flex gap-2">
+        <Button variant="outline" size="icon" onClick={load} title="Refresh">
+          <RefreshCw className="h-4 w-4" />
+        </Button>
         <Button asChild>
           <Link href="/transactions/new">
             <Plus className="h-4 w-4" /> New transaction
           </Link>
         </Button>
+        </div>
       </div>
 
       <Card>
