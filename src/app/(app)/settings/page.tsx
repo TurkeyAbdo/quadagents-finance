@@ -59,6 +59,10 @@ export default function SettingsPage() {
     type: TxnType;
     brand: Brand | "";
   }>({ name: "", type: "expense", brand: "" });
+  const [newRate, setNewRate] = useState<{ currency: string; rate: string }>({
+    currency: "",
+    rate: "",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -150,6 +154,76 @@ export default function SettingsPage() {
     }
     await load();
     toast({ title: `Rate saved for ${currency}` });
+  }
+
+  async function addRate() {
+    const code = newRate.currency.trim().toUpperCase();
+    const rate = Number(newRate.rate);
+    if (!code || code.length > 5 || !/^[A-Z]+$/.test(code)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid currency code",
+        description: "Use 3–5 uppercase letters, e.g. JPY, GBP, INR.",
+      });
+      return;
+    }
+    if (!rate || rate <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid rate",
+        description: "Enter how many SDG equal 1 unit of this currency.",
+      });
+      return;
+    }
+    if (rates.some((r) => r.currency === code)) {
+      toast({
+        variant: "destructive",
+        title: "Already exists",
+        description: `${code} is already in the list.`,
+      });
+      return;
+    }
+    const supabase = createClient();
+    const { error } = await supabase.from("exchange_rates").insert({
+      currency: code,
+      rate_to_sdg: rate,
+    });
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Add failed",
+        description: error.message,
+      });
+      return;
+    }
+    setNewRate({ currency: "", rate: "" });
+    await load();
+    toast({ title: `Currency ${code} added` });
+  }
+
+  async function deleteRate(currency: Currency) {
+    if (currency === "SDG") return;
+    if (
+      !confirm(
+        `Remove ${currency}? Transactions already recorded in ${currency} keep their stored SDG values.`
+      )
+    )
+      return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("exchange_rates")
+      .delete()
+      .eq("currency", currency);
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error.message,
+      });
+      return;
+    }
+    await load();
+    toast({ title: `${currency} removed` });
   }
 
   async function saveCompany() {
@@ -319,10 +393,47 @@ export default function SettingsPage() {
               <CardTitle className="text-base">Exchange rates</CardTitle>
               <CardDescription>
                 Base currency is SDG. Rate is &ldquo;SDG per 1 unit of
-                currency&rdquo;.
+                currency&rdquo;. Add any currency you need.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-cur">Currency code</Label>
+                  <Input
+                    id="new-cur"
+                    maxLength={5}
+                    placeholder="e.g. SAR, GBP, JPY"
+                    value={newRate.currency}
+                    onChange={(e) =>
+                      setNewRate({
+                        ...newRate,
+                        currency: e.target.value.toUpperCase(),
+                      })
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label htmlFor="new-rate">Rate to SDG (1 unit = ? SDG)</Label>
+                  <Input
+                    id="new-rate"
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    placeholder="e.g. 680"
+                    value={newRate.rate}
+                    onChange={(e) =>
+                      setNewRate({ ...newRate, rate: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2 flex items-end">
+                  <Button className="w-full" onClick={addRate}>
+                    <Plus className="h-4 w-4" /> Add currency
+                  </Button>
+                </div>
+              </div>
+
               {loading ? (
                 <div className="text-sm text-muted-foreground">Loading...</div>
               ) : (
@@ -333,13 +444,30 @@ export default function SettingsPage() {
                         <TableHead>Currency</TableHead>
                         <TableHead>Rate to SDG</TableHead>
                         <TableHead>Last updated</TableHead>
-                        <TableHead className="w-32"></TableHead>
+                        <TableHead className="w-44 text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {rates.map((r) => (
-                        <RateRow key={r.currency} rate={r} onSave={saveRate} />
+                        <RateRow
+                          key={r.currency}
+                          rate={r}
+                          onSave={saveRate}
+                          onDelete={deleteRate}
+                        />
                       ))}
+                      {rates.length === 0 && !loading && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className="text-center text-sm text-muted-foreground py-6"
+                          >
+                            No currencies yet. Add one above.
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -416,10 +544,11 @@ export default function SettingsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SDG">SDG</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="EUR">EUR</SelectItem>
-                        <SelectItem value="AED">AED</SelectItem>
+                        {rates.map((r) => (
+                          <SelectItem key={r.currency} value={r.currency}>
+                            {r.currency}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -442,15 +571,23 @@ export default function SettingsPage() {
 function RateRow({
   rate,
   onSave,
+  onDelete,
 }: {
   rate: ExchangeRate;
   onSave: (currency: Currency, rate: number) => Promise<void>;
+  onDelete: (currency: Currency) => Promise<void>;
 }) {
   const [v, setV] = useState<number>(Number(rate.rate_to_sdg));
   const dirty = Number(v) !== Number(rate.rate_to_sdg);
+  const isBase = rate.currency === "SDG";
   return (
     <TableRow>
-      <TableCell className="font-medium">{rate.currency}</TableCell>
+      <TableCell className="font-medium">
+        {rate.currency}
+        {isBase && (
+          <span className="ml-2 text-xs text-muted-foreground">(base)</span>
+        )}
+      </TableCell>
       <TableCell>
         <Input
           type="number"
@@ -459,7 +596,7 @@ function RateRow({
           className="max-w-[200px]"
           value={v}
           onChange={(e) => setV(Number(e.target.value))}
-          disabled={rate.currency === "SDG"}
+          disabled={isBase}
         />
       </TableCell>
       <TableCell className="text-muted-foreground text-xs">
@@ -468,13 +605,25 @@ function RateRow({
           : "—"}
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          variant="secondary"
-          disabled={!dirty || rate.currency === "SDG"}
-          onClick={() => onSave(rate.currency, Number(v))}
-        >
-          <Save className="h-4 w-4" /> Save
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="secondary"
+            disabled={!dirty || isBase}
+            onClick={() => onSave(rate.currency, Number(v))}
+          >
+            <Save className="h-4 w-4" /> Save
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive"
+            disabled={isBase}
+            onClick={() => onDelete(rate.currency)}
+            aria-label="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );

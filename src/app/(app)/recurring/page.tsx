@@ -6,12 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/currency";
 import {
   BRANDS,
-  CURRENCIES,
   type Brand,
   type Category,
   type Currency,
   type RecurringExpense,
 } from "@/lib/types";
+import { useCurrencies } from "@/hooks/use-currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +63,7 @@ export default function RecurringPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
+  const { currencies } = useCurrencies();
 
   async function load() {
     const supabase = createClient();
@@ -306,7 +307,7 @@ export default function RecurringPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CURRENCIES.map((c) => (
+                      {currencies.map((c) => (
                         <SelectItem key={c} value={c}>
                           {c}
                         </SelectItem>

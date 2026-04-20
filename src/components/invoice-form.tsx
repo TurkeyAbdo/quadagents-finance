@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { convertToSDG, ratesToMap } from "@/lib/currency";
 import {
   BRANDS,
-  CURRENCIES,
   type Brand,
   type Client,
   type Currency,
@@ -15,6 +14,7 @@ import {
   type Invoice,
   type InvoiceItem,
 } from "@/lib/types";
+import { useCurrencies } from "@/hooks/use-currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,6 +82,7 @@ export function InvoiceForm({
   const [currency, setCurrency] = useState<Currency>(
     initial?.currency ?? "SDG"
   );
+  const { currencies } = useCurrencies();
   const [taxRate, setTaxRate] = useState<number>(Number(initial?.tax_rate ?? 0));
   const [notes, setNotes] = useState<string>(initial?.notes ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(
@@ -284,7 +285,7 @@ export function InvoiceForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CURRENCIES.map((c) => (
+                {currencies.map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}
                   </SelectItem>

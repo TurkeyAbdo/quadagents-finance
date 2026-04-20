@@ -2,7 +2,7 @@ export type TxnType = "income" | "expense";
 export type Brand = "QuadAgents" | "Mansatak" | "Shared";
 export type ClientType = "client" | "vendor";
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
-export type Currency = "SDG" | "USD" | "EUR" | "AED" | string;
+export type Currency = string;
 
 export interface Category {
   id: string;
@@ -98,4 +98,5 @@ export interface CompanySettings {
 }
 
 export const BRANDS: Brand[] = ["QuadAgents", "Mansatak", "Shared"];
-export const CURRENCIES: Currency[] = ["SDG", "USD", "EUR", "AED"];
+// Fallback list — real list is fetched from the exchange_rates table via useCurrencies()
+export const DEFAULT_CURRENCIES: Currency[] = ["SDG", "USD", "EUR", "SAR"];

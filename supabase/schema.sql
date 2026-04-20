@@ -147,9 +147,9 @@ create policy "auth all" on invoice_items for all to authenticated using (true) 
 create policy "auth all" on transactions for all to authenticated using (true) with check (true);
 create policy "auth all" on company_settings for all to authenticated using (true) with check (true);
 
--- seed exchange rates
+-- seed exchange rates (placeholder values — update in Settings)
 insert into exchange_rates (currency, rate_to_sdg) values
-  ('SDG', 1), ('USD', 2500), ('EUR', 2700), ('AED', 680)
+  ('SDG', 1), ('USD', 2500), ('EUR', 2700), ('SAR', 670)
 on conflict (currency) do nothing;
 
 -- seed categories

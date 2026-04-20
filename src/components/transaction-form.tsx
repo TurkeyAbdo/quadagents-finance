@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { convertToSDG, ratesToMap } from "@/lib/currency";
 import {
   BRANDS,
-  CURRENCIES,
   type Brand,
   type Category,
   type Client,
@@ -15,6 +14,7 @@ import {
   type Transaction,
   type TxnType,
 } from "@/lib/types";
+import { useCurrencies } from "@/hooks/use-currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +54,7 @@ export function TransactionForm({
   const [currency, setCurrency] = useState<Currency>(
     initial?.currency ?? "SDG"
   );
+  const { currencies } = useCurrencies();
   const [brand, setBrand] = useState<Brand>(initial?.brand ?? "Shared");
   const [categoryId, setCategoryId] = useState<string>(
     initial?.category_id ?? ""
@@ -209,7 +210,7 @@ export function TransactionForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCIES.map((c) => (
+                  {currencies.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
                     </SelectItem>
