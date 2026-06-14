@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type { Client, ClientType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,9 +52,9 @@ export default function ClientsPage() {
   const [editing, setEditing] = useState<Client | null>(null);
 
   async function load() {
-    const supabase = createClient();
+    const db = createClient();
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await db
       .from("clients")
       .select("*")
       .order("name");
@@ -67,7 +67,7 @@ export default function ClientsPage() {
   }, []);
 
   async function save(c: Client) {
-    const supabase = createClient();
+    const db = createClient();
     if (!c.name.trim()) {
       toast({
         variant: "destructive",
@@ -84,8 +84,8 @@ export default function ClientsPage() {
       notes: c.notes || null,
     };
     const { error } = c.id
-      ? await supabase.from("clients").update(payload).eq("id", c.id)
-      : await supabase.from("clients").insert(payload);
+      ? await db.from("clients").update(payload).eq("id", c.id)
+      : await db.from("clients").insert(payload);
     if (error) {
       toast({
         variant: "destructive",
@@ -102,8 +102,8 @@ export default function ClientsPage() {
   async function remove(id: string) {
     if (!confirm("Delete this contact? Related transactions/invoices are kept."))
       return;
-    const supabase = createClient();
-    const { error } = await supabase.from("clients").delete().eq("id", id);
+    const db = createClient();
+    const { error } = await db.from("clients").delete().eq("id", id);
     if (error) {
       toast({
         variant: "destructive",

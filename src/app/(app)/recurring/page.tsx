@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { formatCurrency } from "@/lib/currency";
 import {
   BRANDS,
@@ -66,14 +66,14 @@ export default function RecurringPage() {
   const { currencies } = useCurrencies();
 
   async function load() {
-    const supabase = createClient();
+    const db = createClient();
     setLoading(true);
     const [{ data: r }, { data: c }] = await Promise.all([
-      supabase
+      db
         .from("recurring_expenses")
         .select("*")
         .order("name"),
-      supabase
+      db
         .from("categories")
         .select("*")
         .eq("type", "expense")
@@ -94,7 +94,7 @@ export default function RecurringPage() {
   );
 
   async function save(r: RecurringExpense) {
-    const supabase = createClient();
+    const db = createClient();
     if (!r.name.trim()) {
       toast({ variant: "destructive", title: "Name is required" });
       return;
@@ -125,11 +125,11 @@ export default function RecurringPage() {
       active: r.active,
     };
     const { error } = r.id
-      ? await supabase
+      ? await db
           .from("recurring_expenses")
           .update(payload)
           .eq("id", r.id)
-      : await supabase.from("recurring_expenses").insert(payload);
+      : await db.from("recurring_expenses").insert(payload);
     if (error) {
       toast({
         variant: "destructive",
@@ -144,8 +144,8 @@ export default function RecurringPage() {
   }
 
   async function toggleActive(r: RecurringExpense) {
-    const supabase = createClient();
-    await supabase
+    const db = createClient();
+    await db
       .from("recurring_expenses")
       .update({ active: !r.active })
       .eq("id", r.id);
@@ -154,8 +154,8 @@ export default function RecurringPage() {
 
   async function remove(id: string) {
     if (!confirm("Delete this recurring expense? History is preserved.")) return;
-    const supabase = createClient();
-    await supabase.from("recurring_expenses").delete().eq("id", id);
+    const db = createClient();
+    await db.from("recurring_expenses").delete().eq("id", id);
     toast({ title: "Recurring deleted" });
     await load();
   }

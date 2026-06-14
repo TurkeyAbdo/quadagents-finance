@@ -99,4 +99,4 @@ export interface CompanySettings {
 
 export const BRANDS: Brand[] = ["QuadAgents", "Mansatak", "Shared"];
 // Fallback list — real list is fetched from the exchange_rates table via useCurrencies()
-export const DEFAULT_CURRENCIES: Currency[] = ["SDG", "USD", "EUR", "SAR"];
+export const DEFAULT_CURRENCIES: Currency[] = ["SDG", "USD", "EUR", "AED"];

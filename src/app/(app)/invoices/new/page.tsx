@@ -1,14 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { InvoiceForm } from "@/components/invoice-form";
 import type { Client, ExchangeRate } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 async function computeNextInvoiceNumber(): Promise<string> {
-  const supabase = createClient();
+  const db = createClient();
   const year = new Date().getFullYear();
   const prefix = `INV-${year}-`;
-  const { data } = await supabase
+  const { data } = await db
     .from("invoices")
     .select("invoice_number")
     .like("invoice_number", `${prefix}%`);
@@ -23,10 +23,10 @@ async function computeNextInvoiceNumber(): Promise<string> {
 }
 
 export default async function NewInvoicePage() {
-  const supabase = createClient();
+  const db = createClient();
   const [{ data: clients }, { data: rates }, nextNumber] = await Promise.all([
-    supabase.from("clients").select("*").order("name"),
-    supabase.from("exchange_rates").select("*"),
+    db.from("clients").select("*").order("name"),
+    db.from("exchange_rates").select("*"),
     computeNextInvoiceNumber(),
   ]);
 

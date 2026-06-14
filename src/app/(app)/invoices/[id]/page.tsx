@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import type {
   Client,
   CompanySettings,
@@ -16,7 +16,7 @@ export default async function InvoiceDetailPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = createClient();
+  const db = createClient();
 
   const [
     { data: invoice },
@@ -25,14 +25,14 @@ export default async function InvoiceDetailPage({
     { data: rates },
     { data: company },
   ] = await Promise.all([
-    supabase.from("invoices").select("*").eq("id", params.id).single(),
-    supabase
+    db.from("invoices").select("*").eq("id", params.id).single(),
+    db
       .from("invoice_items")
       .select("*")
       .eq("invoice_id", params.id),
-    supabase.from("clients").select("*").order("name"),
-    supabase.from("exchange_rates").select("*"),
-    supabase.from("company_settings").select("*").eq("id", 1).single(),
+    db.from("clients").select("*").order("name"),
+    db.from("exchange_rates").select("*"),
+    db.from("company_settings").select("*").eq("id", 1).single(),
   ]);
 
   if (!invoice) notFound();

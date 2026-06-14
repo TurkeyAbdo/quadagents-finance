@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { convertToSDG, ratesToMap } from "@/lib/currency";
 import {
   BRANDS,
@@ -91,7 +91,7 @@ export function TransactionForm({
     }
 
     setLoading(true);
-    const supabase = createClient();
+    const db = createClient();
 
     const payload = {
       type,
@@ -107,10 +107,10 @@ export function TransactionForm({
 
     let resErr = null;
     if (mode === "create") {
-      const { error } = await supabase.from("transactions").insert(payload);
+      const { error } = await db.from("transactions").insert(payload);
       resErr = error;
     } else if (initial) {
-      const { error } = await supabase
+      const { error } = await db
         .from("transactions")
         .update(payload)
         .eq("id", initial.id);
@@ -136,8 +136,8 @@ export function TransactionForm({
   async function onDelete() {
     if (!initial) return;
     if (!confirm("Delete this transaction? This cannot be undone.")) return;
-    const supabase = createClient();
-    const { error } = await supabase
+    const db = createClient();
+    const { error } = await db
       .from("transactions")
       .delete()
       .eq("id", initial.id);

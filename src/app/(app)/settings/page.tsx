@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Plus, Trash2, Save } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import {
   BRANDS,
   type Brand,
@@ -67,12 +67,12 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   async function load() {
-    const supabase = createClient();
+    const db = createClient();
     setLoading(true);
     const [{ data: c }, { data: r }, { data: co }] = await Promise.all([
-      supabase.from("categories").select("*").order("type").order("name"),
-      supabase.from("exchange_rates").select("*").order("currency"),
-      supabase.from("company_settings").select("*").eq("id", 1).single(),
+      db.from("categories").select("*").order("type").order("name"),
+      db.from("exchange_rates").select("*").order("currency"),
+      db.from("company_settings").select("*").eq("id", 1).single(),
     ]);
     setCats((c ?? []) as Category[]);
     setRates((r ?? []) as ExchangeRate[]);
@@ -95,8 +95,8 @@ export default function SettingsPage() {
 
   async function addCategory() {
     if (!newCat.name.trim()) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("categories").insert({
+    const db = createClient();
+    const { error } = await db.from("categories").insert({
       name: newCat.name,
       type: newCat.type,
       brand: newCat.brand || null,
@@ -121,8 +121,8 @@ export default function SettingsPage() {
       )
     )
       return;
-    const supabase = createClient();
-    const { error } = await supabase.from("categories").delete().eq("id", id);
+    const db = createClient();
+    const { error } = await db.from("categories").delete().eq("id", id);
     if (error) {
       toast({
         variant: "destructive",
@@ -136,8 +136,8 @@ export default function SettingsPage() {
   }
 
   async function saveRate(currency: Currency, rate: number) {
-    const supabase = createClient();
-    const { error } = await supabase
+    const db = createClient();
+    const { error } = await db
       .from("exchange_rates")
       .upsert({
         currency,
@@ -183,8 +183,8 @@ export default function SettingsPage() {
       });
       return;
     }
-    const supabase = createClient();
-    const { error } = await supabase.from("exchange_rates").insert({
+    const db = createClient();
+    const { error } = await db.from("exchange_rates").insert({
       currency: code,
       rate_to_sdg: rate,
     });
@@ -209,8 +209,8 @@ export default function SettingsPage() {
       )
     )
       return;
-    const supabase = createClient();
-    const { error } = await supabase
+    const db = createClient();
+    const { error } = await db
       .from("exchange_rates")
       .delete()
       .eq("currency", currency);
@@ -229,8 +229,8 @@ export default function SettingsPage() {
   async function saveCompany() {
     if (!company) return;
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("company_settings").upsert({
+    const db = createClient();
+    const { error } = await db.from("company_settings").upsert({
       id: 1,
       name: company.name,
       address: company.address,
@@ -403,7 +403,7 @@ export default function SettingsPage() {
                   <Input
                     id="new-cur"
                     maxLength={5}
-                    placeholder="e.g. SAR, GBP, JPY"
+                    placeholder="e.g. AED, GBP, JPY"
                     value={newRate.currency}
                     onChange={(e) =>
                       setNewRate({

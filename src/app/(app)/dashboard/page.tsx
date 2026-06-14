@@ -6,7 +6,7 @@ import {
   CircleDollarSign,
   TrendingUp,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { formatSDG } from "@/lib/currency";
 import { StatCard } from "@/components/stat-card";
 import { MonthlyBar } from "@/components/charts/monthly-bar";
@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const db = createClient();
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -39,12 +39,12 @@ export default async function DashboardPage() {
   const sixMonthsAgo = startOfMonth(subMonths(now, 5));
 
   const [{ data: txns }, { data: categories }] = await Promise.all([
-    supabase
+    db
       .from("transactions")
       .select("*")
       .gte("date", sixMonthsAgo.toISOString().slice(0, 10))
       .order("date", { ascending: false }),
-    supabase.from("categories").select("*"),
+    db.from("categories").select("*"),
   ]);
 
   const tx = (txns ?? []) as Transaction[];

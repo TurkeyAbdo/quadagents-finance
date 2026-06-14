@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,11 @@ import { toast } from "@/hooks/use-toast";
 function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("next") || "/dashboard";
+  const rawNext = search.get("next");
+  const next =
+    rawNext?.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,8 +25,8 @@ function LoginForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const db = createClient();
+    const { error } = await db.auth.signInWithPassword({
       email,
       password,
     });

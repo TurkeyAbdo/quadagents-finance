@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { autoLogRecurringExpenses } from "@/lib/recurring";
 
 export default async function AppLayout({
@@ -8,10 +8,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
+  const db = createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await db.auth.getUser();
 
   if (!user) redirect("/login");
 

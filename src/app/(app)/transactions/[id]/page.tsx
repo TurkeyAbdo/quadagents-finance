@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { TransactionForm } from "@/components/transaction-form";
 import type {
   Category,
@@ -15,17 +15,17 @@ export default async function EditTransactionPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = createClient();
+  const db = createClient();
   const [{ data: txn }, { data: cats }, { data: clients }, { data: rates }] =
     await Promise.all([
-      supabase
+      db
         .from("transactions")
         .select("*")
         .eq("id", params.id)
         .single(),
-      supabase.from("categories").select("*").order("name"),
-      supabase.from("clients").select("*").order("name"),
-      supabase.from("exchange_rates").select("*"),
+      db.from("categories").select("*").order("name"),
+      db.from("clients").select("*").order("name"),
+      db.from("exchange_rates").select("*"),
     ]);
 
   if (!txn) notFound();

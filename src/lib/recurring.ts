@@ -1,5 +1,5 @@
-import { createClient } from "./supabase/server";
 import { convertToSDG, ratesToMap } from "./currency";
+import { query, withTransaction } from "./db/postgres";
 import type { ExchangeRate, RecurringExpense } from "./types";
 
 /**
@@ -12,7 +12,6 @@ import type { ExchangeRate, RecurringExpense } from "./types";
  * Call from dashboard load / post-login.
  */
 export async function autoLogRecurringExpenses(): Promise<number> {
-  const supabase = createClient();
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(
     now.getMonth() + 1
@@ -20,17 +19,14 @@ export async function autoLogRecurringExpenses(): Promise<number> {
   const today = now.getDate();
   const todayIso = now.toISOString().slice(0, 10);
 
-  const { data: recs } = await supabase
-    .from("recurring_expenses")
-    .select("*")
-    .eq("active", true);
+  const recs = await query<RecurringExpense>(
+    "select * from recurring_expenses where active = true"
+  );
 
   if (!recs || recs.length === 0) return 0;
 
-  const { data: rates } = await supabase
-    .from("exchange_rates")
-    .select("*");
-  const rateMap = ratesToMap((rates ?? []) as ExchangeRate[]);
+  const rates = await query<ExchangeRate>("select * from exchange_rates");
+  const rateMap = ratesToMap(rates);
 
   let inserted = 0;
   for (const r of recs as RecurringExpense[]) {
@@ -39,24 +35,45 @@ export async function autoLogRecurringExpenses(): Promise<number> {
 
     const sdg_amount = convertToSDG(Number(r.amount), r.currency, rateMap);
 
-    const { error: txErr } = await supabase.from("transactions").insert({
-      type: "expense",
-      date: todayIso,
-      amount: Number(r.amount),
-      currency: r.currency,
-      sdg_amount,
-      brand: r.brand,
-      category_id: r.category_id,
-      description: `[Recurring] ${r.name}`,
-      is_from_recurring: true,
-      recurring_id: r.id,
+    const didInsert = await withTransaction(async (client) => {
+      const claimed = await client.query(
+        `update recurring_expenses
+         set last_logged_month = $1
+         where id = $2 and (last_logged_month is null or last_logged_month <> $1)
+         returning id`,
+        [currentMonth, r.id]
+      );
+      if (claimed.rowCount === 0) return false;
+
+      await client.query(
+        `insert into transactions (
+          type,
+          date,
+          amount,
+          currency,
+          sdg_amount,
+          brand,
+          category_id,
+          description,
+          is_from_recurring,
+          recurring_id
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)`,
+        [
+          "expense",
+          todayIso,
+          Number(r.amount),
+          r.currency,
+          sdg_amount,
+          r.brand,
+          r.category_id,
+          `[Recurring] ${r.name}`,
+          r.id,
+        ]
+      );
+      return true;
     });
 
-    if (!txErr) {
-      await supabase
-        .from("recurring_expenses")
-        .update({ last_logged_month: currentMonth })
-        .eq("id", r.id);
+    if (didInsert) {
       inserted += 1;
     }
   }

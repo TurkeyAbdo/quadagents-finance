@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Plus } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { convertToSDG, ratesToMap } from "@/lib/currency";
 import {
   BRANDS,
@@ -145,7 +145,7 @@ export function InvoiceForm({
     }
 
     setLoading(true);
-    const supabase = createClient();
+    const db = createClient();
 
     const invoicePayload = {
       invoice_number: invoiceNumber,
@@ -165,7 +165,7 @@ export function InvoiceForm({
     let invoiceId = initial?.id;
 
     if (mode === "create") {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("invoices")
         .insert(invoicePayload)
         .select("id")
@@ -181,7 +181,7 @@ export function InvoiceForm({
       }
       invoiceId = data!.id;
     } else if (initial) {
-      const { error } = await supabase
+      const { error } = await db
         .from("invoices")
         .update(invoicePayload)
         .eq("id", initial.id);
@@ -195,7 +195,7 @@ export function InvoiceForm({
         return;
       }
       // Replace line items wholesale
-      await supabase.from("invoice_items").delete().eq("invoice_id", initial.id);
+      await db.from("invoice_items").delete().eq("invoice_id", initial.id);
     }
 
     if (invoiceId) {
@@ -206,7 +206,7 @@ export function InvoiceForm({
         unit_price: Number(it.unit_price),
         total: Number(it.quantity) * Number(it.unit_price),
       }));
-      const { error: itemsErr } = await supabase
+      const { error: itemsErr } = await db
         .from("invoice_items")
         .insert(itemRows);
       if (itemsErr) {

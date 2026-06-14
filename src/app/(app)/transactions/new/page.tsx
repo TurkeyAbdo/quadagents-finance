@@ -1,16 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { TransactionForm } from "@/components/transaction-form";
 import type { Category, Client, ExchangeRate } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewTransactionPage() {
-  const supabase = createClient();
+  const db = createClient();
   const [{ data: cats }, { data: clients }, { data: rates }] =
     await Promise.all([
-      supabase.from("categories").select("*").order("name"),
-      supabase.from("clients").select("*").order("name"),
-      supabase.from("exchange_rates").select("*"),
+      db.from("categories").select("*").order("name"),
+      db.from("clients").select("*").order("name"),
+      db.from("exchange_rates").select("*"),
     ]);
 
   return (

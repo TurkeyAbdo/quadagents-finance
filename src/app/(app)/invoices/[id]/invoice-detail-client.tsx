@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Download, CheckCircle2, Trash2, Send } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { generateInvoicePDF } from "@/lib/pdf";
 import { formatCurrency, formatSDG } from "@/lib/currency";
 import { InvoiceForm } from "@/components/invoice-form";
 import type {
   Client,
+  Category,
   CompanySettings,
   ExchangeRate,
   Invoice,
@@ -88,8 +89,8 @@ export function InvoiceDetailClient({
 
   async function onMarkAsSent() {
     setBusy("send");
-    const supabase = createClient();
-    const { error } = await supabase
+    const db = createClient();
+    const { error } = await db
       .from("invoices")
       .update({ status: "sent" })
       .eq("id", invoice.id);
@@ -108,10 +109,10 @@ export function InvoiceDetailClient({
 
   async function onMarkAsPaid() {
     setBusy("paid");
-    const supabase = createClient();
+    const db = createClient();
 
     // Idempotency: check if an income transaction already exists for this invoice.
-    const { data: existing } = await supabase
+    const { data: existing } = await db
       .from("transactions")
       .select("id")
       .eq("invoice_id", invoice.id)
@@ -120,7 +121,7 @@ export function InvoiceDetailClient({
 
     // Always mark the invoice paid (safe even if status already = paid)
     const paidAt = new Date().toISOString();
-    const { error: invErr } = await supabase
+    const { error: invErr } = await db
       .from("invoices")
       .update({ status: "paid", paid_at: paidAt })
       .eq("id", invoice.id);
@@ -137,15 +138,18 @@ export function InvoiceDetailClient({
 
     if (!existing || existing.length === 0) {
       // Find a reasonable income category to attribute the payment to.
-      const { data: cats } = await supabase
+      const { data: cats } = await db
         .from("categories")
         .select("*")
         .eq("type", "income")
         .order("name");
+      const incomeCats = (cats ?? []) as Category[];
       const preferred =
-        cats?.find((c) => c.name === "Client Revenue") ?? cats?.[0] ?? null;
+        incomeCats.find((c) => c.name === "Client Revenue") ??
+        incomeCats[0] ??
+        null;
 
-      const { error: txErr } = await supabase.from("transactions").insert({
+      const { error: txErr } = await db.from("transactions").insert({
         type: "income",
         date: new Date().toISOString().slice(0, 10),
         amount: invoice.total,
@@ -177,11 +181,9 @@ export function InvoiceDetailClient({
   async function onDelete() {
     if (!confirm("Delete this invoice? This cannot be undone.")) return;
     setBusy("delete");
-    const supabase = createClient();
-    // Cascades to invoice_items (FK on delete cascade).
-    // Transactions linking to this invoice have invoice_id FK without cascade,
-    // so they remain (their invoice_id becomes dangling — acceptable for team trust model).
-    const { error } = await supabase
+    const db = createClient();
+    // Cascades to invoice_items; linked transactions keep their history with invoice_id set null.
+    const { error } = await db
       .from("invoices")
       .delete()
       .eq("id", invoice.id);

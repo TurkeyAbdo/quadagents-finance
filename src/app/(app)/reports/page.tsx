@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, startOfYear } from "date-fns";
 import { Download, FileSpreadsheet } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { formatSDG } from "@/lib/currency";
 import { MonthlyBar } from "@/components/charts/monthly-bar";
 import { downloadCSV } from "@/lib/csv";
@@ -54,14 +54,14 @@ export default function ReportsPage() {
 
   useEffect(() => {
     (async () => {
-      const supabase = createClient();
+      const db = createClient();
       setLoading(true);
       const [{ data: tx }, { data: c }] = await Promise.all([
-        supabase
+        db
           .from("transactions")
           .select("*")
           .order("date", { ascending: true }),
-        supabase.from("categories").select("*"),
+        db.from("categories").select("*"),
       ]);
       setTxns((tx ?? []) as Transaction[]);
       setCats((c ?? []) as Category[]);

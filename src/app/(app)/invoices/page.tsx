@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Plus, ExternalLink } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { formatCurrency, formatSDG } from "@/lib/currency";
 import type { Client, Invoice, InvoiceStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -50,15 +50,15 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     (async () => {
-      const supabase = createClient();
+      const db = createClient();
       setLoading(true);
       const [{ data: inv }, { data: cl }] = await Promise.all([
-        supabase
+        db
           .from("invoices")
           .select("*")
           .order("issue_date", { ascending: false })
           .limit(500),
-        supabase.from("clients").select("*"),
+        db.from("clients").select("*"),
       ]);
 
       // Lightweight client-side "overdue" marker: if due_date < today and status === "sent",

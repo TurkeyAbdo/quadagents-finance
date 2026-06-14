@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Plus, Pencil, RefreshCw } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { formatCurrency, formatSDG } from "@/lib/currency";
 import {
   BRANDS,
@@ -53,17 +53,17 @@ export default function TransactionsPage() {
   const [categoryId, setCategoryId] = useState<string>("all");
 
   const load = useCallback(async () => {
-    const supabase = createClient();
+    const db = createClient();
     setLoading(true);
     const [{ data: tx }, { data: c }, { data: cl }] = await Promise.all([
-      supabase
+      db
         .from("transactions")
         .select("*")
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(500),
-      supabase.from("categories").select("*"),
-      supabase.from("clients").select("*"),
+      db.from("categories").select("*"),
+      db.from("clients").select("*"),
     ]);
     setTxns((tx ?? []) as Transaction[]);
     setCats((c ?? []) as Category[]);

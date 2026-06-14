@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type { Currency } from "@/lib/types";
 
-const FALLBACK: Currency[] = ["SDG", "USD", "EUR", "SAR"];
+const FALLBACK: Currency[] = ["SDG", "USD", "EUR", "AED"];
 
 export function useCurrencies() {
   const [currencies, setCurrencies] = useState<Currency[]>(FALLBACK);
@@ -12,14 +12,16 @@ export function useCurrencies() {
 
   useEffect(() => {
     let alive = true;
-    const supabase = createClient();
-    supabase
+    const db = createClient();
+    db
       .from("exchange_rates")
       .select("currency")
       .order("currency")
       .then(({ data }) => {
         if (!alive) return;
-        const list = (data ?? []).map((r) => r.currency as Currency);
+        const list = ((data ?? []) as Array<{ currency: Currency }>).map(
+          (r) => r.currency
+        );
         if (list.length > 0) {
           // ensure SDG first
           list.sort((a, b) => (a === "SDG" ? -1 : b === "SDG" ? 1 : a.localeCompare(b)));
